@@ -28,16 +28,6 @@ const ROOT = path.resolve(__dirname, '..');
 const REPORT_IN = path.join(ROOT, 'logs', 'code-locations.json');
 const FAILURE_REPORT = path.join(ROOT, 'logs', 'failure-report.json');
 
-// Map each failure ID to the expected strategy for mock matching
-const FAILURE_TO_STRATEGY = {
-  'failure-001': 'wrong_field_access',
-  'failure-002': 'error_handler_arity',
-  'failure-003': 'wrong_http_method',
-  'failure-004': 'missing_await',
-  'failure-005': 'error_handler_arity',
-  'failure-006': 'division_by_zero'
-};
-
 // Mock data to simulate Attempt 1 (fails) and Attempt 2 (passes)
 const MOCK_PATCHES = {
   'src/controllers/productController.js': {
@@ -241,7 +231,20 @@ async function debugAndRepair() {
         let rootCause = '';
 
         if (isMockMode) {
-          const targetStrategy = FAILURE_TO_STRATEGY[loc.failureId];
+          let targetStrategy = '';
+          const testName = loc.testName.toLowerCase();
+          if (testName.includes('b1') || testName.includes('correct name')) {
+            targetStrategy = 'wrong_field_access';
+          } else if (testName.includes('b2') || testName.includes('valid _id')) {
+            targetStrategy = 'missing_await';
+          } else if (testName.includes('b3') || testName.includes('delete a user')) {
+            targetStrategy = 'wrong_http_method';
+          } else if (testName.includes('b4') || testName.includes('discountedprice')) {
+            targetStrategy = 'division_by_zero';
+          } else if (testName.includes('no email') || testName.includes('negative price')) {
+            targetStrategy = 'error_handler_arity';
+          }
+
           const mockFile = MOCK_PATCHES[relPath];
           let mockFound = false;
 
