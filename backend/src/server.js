@@ -3,16 +3,18 @@ const mongoose = require('mongoose');
 const app = require('./app');
 
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI;
+let MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  console.error('[FATAL] MONGODB_URI environment variable is not set.');
-  console.error('Copy .env.example to .env and fill in your MongoDB Atlas URI.');
-  process.exit(1);
-}
+async function startServer() {
+  if (!MONGODB_URI) {
+    console.log('[DB] MONGODB_URI not set. Spinning up mongodb-memory-server...');
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongoServer = await MongoMemoryServer.create();
+    MONGODB_URI = mongoServer.getUri();
+  }
 
-mongoose
-  .connect(MONGODB_URI)
+  mongoose
+    .connect(MONGODB_URI)
   .then(() => {
     console.log('[DB] Connected to MongoDB');
     app.listen(PORT, () => {
@@ -23,3 +25,6 @@ mongoose
     console.error('[DB] Connection failed:', err.message);
     process.exit(1);
   });
+}
+
+startServer();
