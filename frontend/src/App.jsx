@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Bot, Bug, Clock, CheckCircle, XCircle, ChevronRight, Activity, TerminalSquare, SearchCode, Github } from 'lucide-react';
+import { Bot, Bug, Clock, CheckCircle, XCircle, ChevronRight, Activity, TerminalSquare, SearchCode, GitBranch } from 'lucide-react';
 
 const API_BASE = '/api/repairs';
 
@@ -102,7 +102,7 @@ export default function App() {
         <div className="p-4 mt-auto">
           <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
             <div className="flex items-center space-x-2 text-slate-300 mb-2">
-              <Github className="w-4 h-4" />
+              <GitBranch className="w-4 h-4" />
               <span className="text-sm font-semibold">GitHub Integration</span>
             </div>
             <p className="text-xs text-slate-500 mb-3 leading-relaxed">Import repositories directly. (Auto-push disabled for safety).</p>

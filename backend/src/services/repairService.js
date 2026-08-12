@@ -17,10 +17,22 @@ function runCommand(command, args, options = {}) {
   });
 }
 
-function prepareTempWorkspace() {
-  if (fs.existsSync(TEMP_WORKSPACE)) {
+function cleanTempWorkspace() {
+  if (!fs.existsSync(TEMP_WORKSPACE)) return;
+  // On Windows, junctions must be unlinked before rmSync can remove the parent
+  const nmDest = path.join(TEMP_WORKSPACE, 'node_modules');
+  try {
+    if (fs.existsSync(nmDest)) fs.unlinkSync(nmDest);
+  } catch (_) { /* ignore */ }
+  try {
     fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true });
+  } catch (e) {
+    console.warn('[WARN] Could not fully clean temp workspace:', e.message);
   }
+}
+
+function prepareTempWorkspace() {
+  cleanTempWorkspace();
   fs.mkdirSync(TEMP_WORKSPACE, { recursive: true });
 
   const backendDir = path.join(ROOT, 'backend');
@@ -37,7 +49,7 @@ function prepareTempWorkspace() {
     }
   }
 
-  // Create junction for node_modules
+  // Create junction for node_modules (fast, no copy needed)
   const nmSrc = path.join(backendDir, 'node_modules');
   const nmDest = path.join(TEMP_WORKSPACE, 'node_modules');
   if (fs.existsSync(nmSrc)) {
@@ -222,9 +234,7 @@ ${originalContent}
     if (isRepaired) break;
   }
 
-  if (fs.existsSync(TEMP_WORKSPACE)) {
-    fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true });
-  }
+  cleanTempWorkspace();
 
   historyRecord.status = isRepaired ? 'FIX_VERIFIED' : 'REPAIR_FAILED';
   await historyRecord.save();

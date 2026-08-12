@@ -32,10 +32,17 @@ function runCommand(command, args, options = {}) {
   });
 }
 
-function prepareTempWorkspace() {
-  if (fs.existsSync(TEMP_WORKSPACE)) {
-    fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true });
+function cleanTempWorkspace() {
+  if (!fs.existsSync(TEMP_WORKSPACE)) return;
+  const nmDest = path.join(TEMP_WORKSPACE, 'node_modules');
+  try { if (fs.existsSync(nmDest)) fs.unlinkSync(nmDest); } catch (_) {}
+  try { fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true }); } catch (e) {
+    console.warn('[WARN] Could not clean temp workspace:', e.message);
   }
+}
+
+function prepareTempWorkspace() {
+  cleanTempWorkspace();
   fs.mkdirSync(TEMP_WORKSPACE, { recursive: true });
 
   const itemsToCopy = ['src', 'tests', 'package.json', 'jest.config.js'];
@@ -284,9 +291,7 @@ ${h.testOutput}
   }
 
   // Cleanup temp workspace
-  if (fs.existsSync(TEMP_WORKSPACE)) {
-    fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true });
-  }
+  cleanTempWorkspace();
 
   console.log('\n═══════════════════════════════════════════════════════');
   console.log('  REPAIR SUMMARY');
