@@ -1,0 +1,10 @@
+node_modules/
+.env
+test-results.json
+coverage/
+*.log
+
+# Phase 2 generated log files (keep directory, ignore contents)
+logs/*.json
+logs/*.log
+!logs/.gitkeep
