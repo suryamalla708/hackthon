@@ -9,10 +9,12 @@ import TestResults from './pages/TestResults';
 import ApiPlayground from './pages/ApiPlayground';
 import RepairHistory from './pages/RepairHistory';
 import SettingsPage from './pages/Settings';
+import GitHubImport from './pages/GitHubImport';
 import { useRepairData } from './hooks/useRepairData';
 
 const PAGES = {
   'dashboard':      Dashboard,
+  'github-import':  GitHubImport,
   'api-monitor':    ApiMonitor,
   'error-logs':     ErrorLogs,
   'ai-analysis':    AiAnalysis,

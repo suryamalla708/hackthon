@@ -1,7 +1,8 @@
-import { Layers, Activity, FileText, Cpu, Code, CheckCircle, Terminal, Clock, Settings, Bot, ChevronRight } from 'lucide-react';
+import { Layers, Activity, FileText, Cpu, Code, CheckCircle, Terminal, Clock, Settings, Bot, ChevronRight, GitFork } from 'lucide-react';
 
 const NAV = [
   { id: 'dashboard',      label: 'Dashboard',       icon: Layers },
+  { id: 'github-import',  label: 'GitHub Import',   icon: GitFork },
   { id: 'api-monitor',    label: 'API Monitor',     icon: Activity },
   { id: 'error-logs',     label: 'Error Logs',      icon: FileText },
   { id: 'ai-analysis',    label: 'AI Analysis',     icon: Cpu },

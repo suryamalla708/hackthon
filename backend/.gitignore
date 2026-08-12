@@ -11,3 +11,6 @@ logs/*.log
 
 # Phase 5: Temporary repair workspace — never commit this
 backend_temp/
+
+# GitHub imports — cloned repos for analysis
+github_imports/

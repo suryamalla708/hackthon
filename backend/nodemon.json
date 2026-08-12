@@ -1,0 +1,9 @@
+{
+  "ignore": [
+    "github_imports",
+    "backend_temp",
+    "logs",
+    "test-results.json",
+    "*.log"
+  ]
+}

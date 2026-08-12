@@ -4,6 +4,7 @@ const errorHandler = require('./middleware/errorHandler');  // Bug B5: 3-param, 
 const usersRouter = require('./routes/users');
 const productsRouter = require('./routes/products');
 const repairsRouter = require('./routes/repairs');
+const githubRouter = require('./routes/github');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use((req, res, next) => {
 app.use('/api/users', usersRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/repairs', repairsRouter);
+app.use('/api/github', githubRouter);
 
 // ── Health check ─────────────────────────────────────────────
 app.get('/health', (req, res) => {
