@@ -4,6 +4,7 @@ import axios from 'axios';
 export function useRepairData() {
   const [failures, setFailures] = useState([]);
   const [history, setHistory] = useState([]);
+  const [endpoints, setEndpoints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -11,12 +12,14 @@ export function useRepairData() {
     setLoading(true);
     setError(null);
     try {
-      const [fRes, hRes] = await Promise.all([
+      const [fRes, hRes, eRes] = await Promise.all([
         axios.get('/api/repairs/failures'),
         axios.get('/api/repairs/history'),
+        axios.get('/api/settings/endpoints').catch(() => ({ data: { endpoints: [] } }))
       ]);
       setFailures(fRes.data.failures || []);
       setHistory(hRes.data.history || []);
+      setEndpoints(eRes.data.endpoints || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -27,7 +30,7 @@ export function useRepairData() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const stats = {
-    apisMonitored: 6,
+    apisMonitored: endpoints.length || 0,
     activeFailures: failures.length,
     issuesRepaired: history.filter(h => h.status === 'FIX_VERIFIED').length,
     successRate: history.length > 0
@@ -35,17 +38,7 @@ export function useRepairData() {
       : 0,
   };
 
-  // Derive API health rows from failures + known endpoints
-  const KNOWN_ENDPOINTS = [
-    { method: 'POST', path: '/api/products', describeKey: 'POST /api/products' },
-    { method: 'GET',  path: '/api/products', describeKey: 'GET /api/products' },
-    { method: 'GET',  path: '/api/products/:id', describeKey: 'GET /api/products/:id' },
-    { method: 'POST', path: '/api/users', describeKey: 'POST /api/users' },
-    { method: 'DELETE', path: '/api/users/:id', describeKey: 'DELETE /api/users/:id' },
-    { method: 'GET', path: '/api/users', describeKey: 'GET /api/users' },
-  ];
-
-  const apiHealth = KNOWN_ENDPOINTS.map(ep => {
+  const apiHealth = endpoints.map(ep => {
     const relatedFailures = failures.filter(f =>
       f.describeBlock && f.describeBlock.includes(ep.describeKey)
     );
@@ -62,5 +55,5 @@ export function useRepairData() {
     };
   });
 
-  return { failures, history, loading, error, stats, apiHealth, refetch: fetchAll };
+  return { failures, history, loading, error, stats, apiHealth, endpoints, refetch: fetchAll };
 }

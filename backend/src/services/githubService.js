@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { GoogleGenAI, Type } = require('@google/genai');
+const Anthropic = require('@anthropic-ai/sdk');
 const GitHubImport = require('../models/GitHubImport');
 const RepairHistory = require('../models/RepairHistory');
 
@@ -460,9 +460,10 @@ function runAnalysisPipeline(workspacePath, testFramework) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function runImportRepair(importDoc, failureId) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set.');
-
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is not set. Cannot run repair.');
+  }
   const workspacePath = importDoc.workspacePath;
   const codeLocPath = path.join(workspacePath, 'logs', 'code-locations.json');
 
@@ -537,35 +538,25 @@ ${originalContent}
       prompt += `Identify the root cause and output valid JSON with: rootCause, affectedFile, affectedLine, explanation, patch: { search, replace }. Ensure 'search' exactly matches a substring in the source.`;
 
       try {
-        const ai = new GoogleGenAI({ apiKey });
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: prompt,
-          config: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                rootCause: { type: Type.STRING },
-                affectedFile: { type: Type.STRING },
-                affectedLine: { type: Type.INTEGER },
-                explanation: { type: Type.STRING },
-                patch: {
-                  type: Type.OBJECT,
-                  properties: {
-                    search: { type: Type.STRING },
-                    replace: { type: Type.STRING },
-                  },
-                  required: ['search', 'replace'],
-                },
-              },
-              required: ['rootCause', 'affectedFile', 'affectedLine', 'explanation', 'patch'],
-            },
-          },
-        });
+        const anthropic = new Anthropic({ apiKey });
+        const systemPrompt = "You are an AI Debugging Agent fixing a broken Node.js API. Output ONLY valid JSON matching the exact schema requested, with no markdown formatting or extra text.";
 
-        const parsed = JSON.parse(response.text);
+        const response = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 4096,
+          temperature: 0.1,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: prompt }]
+        });
+        
+        let text = response.content[0].text.trim();
+        if (text.startsWith('```json')) {
+          text = text.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+        } else if (text.startsWith('```')) {
+          text = text.replace(/^```\n?/, '').replace(/\n?```$/, '');
+        }
+
+        const parsed = JSON.parse(text);
         search = parsed.patch.search;
         replace = parsed.patch.replace;
         rootCause = parsed.rootCause;

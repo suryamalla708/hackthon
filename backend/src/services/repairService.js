@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { GoogleGenAI, Type } = require('@google/genai');
+const Anthropic = require('@anthropic-ai/sdk');
 const RepairHistory = require('../models/RepairHistory');
 
 const ROOT = path.resolve(__dirname, '../../..');
@@ -58,47 +58,37 @@ function prepareTempWorkspace() {
   }
 }
 
-async function callGeminiAPI(apiKey, prompt, maxRetries = 3) {
-  const ai = new GoogleGenAI({ apiKey });
+async function callClaudeAPI(apiKey, prompt, maxRetries = 3) {
+  const anthropic = new Anthropic({ apiKey });
   let lastError;
+
+  const systemPrompt = "You are an AI Debugging Agent fixing a broken Node.js API. Output ONLY valid JSON matching the exact schema requested, with no markdown formatting or extra text.";
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt,
-        config: {
-          temperature: 0.1,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              rootCause: { type: Type.STRING },
-              affectedFile: { type: Type.STRING },
-              affectedLine: { type: Type.INTEGER },
-              explanation: { type: Type.STRING },
-              patch: {
-                type: Type.OBJECT,
-                properties: {
-                  search: { type: Type.STRING },
-                  replace: { type: Type.STRING }
-                },
-                required: ['search', 'replace']
-              }
-            },
-            required: ['rootCause', 'affectedFile', 'affectedLine', 'explanation', 'patch']
-          }
-        }
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4096,
+        temperature: 0.1,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }]
       });
-      return JSON.parse(response.text);
+      
+      let text = response.content[0].text.trim();
+      // Sometimes Claude wraps in ```json ... ``` despite instructions
+      if (text.startsWith('```json')) {
+        text = text.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      } else if (text.startsWith('```')) {
+        text = text.replace(/^```\n?/, '').replace(/\n?```$/, '');
+      }
+
+      return JSON.parse(text);
     } catch (err) {
       lastError = err;
       const msg = err.message || '';
-      // Handle rate limit: parse the suggested retry delay
-      if (msg.includes('429') && attempt < maxRetries) {
-        const match = msg.match(/retry in ([\.\d]+)s/i);
-        const waitSecs = match ? Math.min(Math.ceil(parseFloat(match[1])) + 2, 65) : 30;
-        console.log(`[GEMINI] Rate limited. Waiting ${waitSecs}s before retry (attempt ${attempt + 1}/${maxRetries})...`);
+      if ((msg.includes('429') || msg.includes('rate_limit')) && attempt < maxRetries) {
+        const waitSecs = 30;
+        console.log(`[CLAUDE] Rate limited. Waiting ${waitSecs}s before retry (attempt ${attempt + 1}/${maxRetries})...`);
         await new Promise(r => setTimeout(r, waitSecs * 1000));
         continue;
       }
@@ -109,9 +99,9 @@ async function callGeminiAPI(apiKey, prompt, maxRetries = 3) {
 }
 
 exports.runRepair = async function(failureId) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY environment variable is not set.');
+    throw new Error('ANTHROPIC_API_KEY environment variable is not set.');
   }
 
   if (!fs.existsSync(REPORT_IN)) {
@@ -199,7 +189,7 @@ ${originalContent}
       let attemptData = { attemptNumber: attempt, search: '', replace: '', testOutput: '' };
       
       try {
-        const parsed = await callGeminiAPI(apiKey, prompt);
+        const parsed = await callClaudeAPI(apiKey, prompt);
         search = parsed.patch.search;
         replace = parsed.patch.replace;
         rootCause = parsed.rootCause;

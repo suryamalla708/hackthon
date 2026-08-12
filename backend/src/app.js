@@ -5,6 +5,7 @@ const usersRouter = require('./routes/users');
 const productsRouter = require('./routes/products');
 const repairsRouter = require('./routes/repairs');
 const githubRouter = require('./routes/github');
+const settingsRouter = require('./routes/settings');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/repairs', repairsRouter);
 app.use('/api/github', githubRouter);
+app.use('/api/settings', settingsRouter);
 
 // ── Health check ─────────────────────────────────────────────
 app.get('/health', (req, res) => {
