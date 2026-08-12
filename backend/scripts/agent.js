@@ -34,10 +34,11 @@ function runCommand(command, args, options = {}) {
 
 function cleanTempWorkspace() {
   if (!fs.existsSync(TEMP_WORKSPACE)) return;
-  const nmDest = path.join(TEMP_WORKSPACE, 'node_modules');
-  try { if (fs.existsSync(nmDest)) fs.unlinkSync(nmDest); } catch (_) {}
-  try { fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true }); } catch (e) {
-    console.warn('[WARN] Could not clean temp workspace:', e.message);
+  // On Windows, `cmd /c rmdir /s /q` is the only reliable way to delete junction directories.
+  if (process.platform === 'win32') {
+    spawnSync('cmd', ['/c', 'rmdir', '/s', '/q', TEMP_WORKSPACE], { shell: false });
+  } else {
+    try { fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true }); } catch (_) {}
   }
 }
 
@@ -66,36 +67,53 @@ function prepareTempWorkspace() {
   }
 }
 
-async function callGeminiAPI(apiKey, prompt) {
+async function callGeminiAPI(apiKey, prompt, maxRetries = 3) {
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.5-flash',
-    contents: prompt,
-    config: {
-      temperature: 0.1,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          rootCause: { type: Type.STRING },
-          affectedFile: { type: Type.STRING },
-          affectedLine: { type: Type.INTEGER },
-          explanation: { type: Type.STRING },
-          patch: {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+          responseSchema: {
             type: Type.OBJECT,
             properties: {
-              search: { type: Type.STRING },
-              replace: { type: Type.STRING }
+              rootCause: { type: Type.STRING },
+              affectedFile: { type: Type.STRING },
+              affectedLine: { type: Type.INTEGER },
+              explanation: { type: Type.STRING },
+              patch: {
+                type: Type.OBJECT,
+                properties: {
+                  search: { type: Type.STRING },
+                  replace: { type: Type.STRING }
+                },
+                required: ['search', 'replace']
+              }
             },
-            required: ['search', 'replace']
+            required: ['rootCause', 'affectedFile', 'affectedLine', 'explanation', 'patch']
           }
-        },
-        required: ['rootCause', 'affectedFile', 'affectedLine', 'explanation', 'patch']
+        }
+      });
+      return JSON.parse(response.text);
+    } catch (err) {
+      lastError = err;
+      const msg = err.message || '';
+      if (msg.includes('429') && attempt < maxRetries) {
+        const match = msg.match(/retry in ([\\.\\d]+)s/i);
+        const waitSecs = match ? Math.min(Math.ceil(parseFloat(match[1])) + 2, 65) : 30;
+        console.log(`     [GEMINI] Rate limited. Waiting ${waitSecs}s before retry (attempt ${attempt + 1}/${maxRetries})...`);
+        await new Promise(r => setTimeout(r, waitSecs * 1000));
+        continue;
       }
+      throw err;
     }
-  });
-
-  return JSON.parse(response.text);
+  }
+  throw lastError;
 }
 
 async function debugAndRepair() {
