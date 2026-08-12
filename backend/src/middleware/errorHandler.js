@@ -24,4 +24,5 @@ function errorHandler(err, req, res, next) { // BUG B5: missing 'err' as first p
     message: err.message || 'An unexpected error occurred',
   });
 }
+
 module.exports = errorHandler;

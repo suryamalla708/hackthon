@@ -30,12 +30,12 @@ const FAILURE_REPORT = path.join(ROOT, 'logs', 'failure-report.json');
 
 // Map each failure ID to the expected strategy for mock matching
 const FAILURE_TO_STRATEGY = {
-  'failure-001': 'missing_await',
+  'failure-001': 'wrong_field_access',
   'failure-002': 'error_handler_arity',
-  'failure-003': 'division_by_zero',
-  'failure-004': 'wrong_field_access',
+  'failure-003': 'wrong_http_method',
+  'failure-004': 'missing_await',
   'failure-005': 'error_handler_arity',
-  'failure-006': 'wrong_http_method'
+  'failure-006': 'division_by_zero'
 };
 
 // Mock data to simulate Attempt 1 (fails) and Attempt 2 (passes)

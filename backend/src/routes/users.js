@@ -24,6 +24,6 @@ router.put('/:id', userController.updateUser);
  *
  * FIX: Change router.put to router.delete below.
  */
-router.delete('/:id', userController.deleteUser); // BUG B3: should be router.delete
+router.put('/:id', userController.deleteUser); // BUG B3: should be router.delete
 
 module.exports = router;

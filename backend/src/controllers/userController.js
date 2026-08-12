@@ -43,7 +43,7 @@ async function getUserById(req, res, next) {
 async function createUser(req, res, next) {
   try {
     const user = new User({
-      name: req.body.name, // BUG B1: should be req.body.name
+      name: req.body.username, // BUG B1: should be req.body.name
       email: req.body.email,
       role: req.body.role,
     });

@@ -32,8 +32,8 @@ async function getProductById(req, res, next) {
       return res.status(404).json({ success: false, error: 'Product not found' });
     }
 
-    const discountPercent = 10; // 10% discount
-    const discountedPrice = product.price * (1 - discountPercent / 100);
+    const discountPercent = 0; // BUG B4: discount divisor is 0 → price / 0 = Infinity
+    const discountedPrice = product.price / discountPercent;
 
     res.status(200).json({
       success: true,
@@ -69,7 +69,7 @@ async function createProduct(req, res, next) {
       category: req.body.category,
     });
 
-    const savedProduct = await product.save(); // BUG B2: missing await
+    const savedProduct = product.save(); // BUG B2: missing await
 
     res.status(201).json({
       success: true,
