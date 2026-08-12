@@ -34,9 +34,14 @@ function runCommand(command, args, options = {}) {
 
 function cleanTempWorkspace() {
   if (!fs.existsSync(TEMP_WORKSPACE)) return;
-  // On Windows, `cmd /c rmdir /s /q` is the only reliable way to delete junction directories.
+  // PowerShell Remove-Item handles Windows junction reparse points correctly
+  // without following them into their targets (unlike cmd rmdir /s /q or fs.rmSync).
   if (process.platform === 'win32') {
-    spawnSync('cmd', ['/c', 'rmdir', '/s', '/q', TEMP_WORKSPACE], { shell: false });
+    spawnSync(
+      'powershell',
+      ['-NoProfile', '-Command', `Remove-Item -Path '${TEMP_WORKSPACE}' -Recurse -Force -ErrorAction SilentlyContinue`],
+      { shell: false }
+    );
   } else {
     try { fs.rmSync(TEMP_WORKSPACE, { recursive: true, force: true }); } catch (_) {}
   }
