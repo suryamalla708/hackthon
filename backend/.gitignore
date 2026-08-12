@@ -8,3 +8,6 @@ coverage/
 logs/*.json
 logs/*.log
 !logs/.gitkeep
+
+# Phase 5: Temporary repair workspace — never commit this
+backend_temp/
