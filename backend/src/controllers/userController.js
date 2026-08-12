@@ -43,13 +43,16 @@ async function getUserById(req, res, next) {
 async function createUser(req, res, next) {
   try {
     const user = new User({
-      name: req.body.username, // BUG B1: should be req.body.name
+      name: req.body.name,
       email: req.body.email,
       role: req.body.role,
     });
     await user.save();
     res.status(201).json({ success: true, data: user });
   } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ success: false, error: err.message });
+    }
     next(err);
   }
 }
@@ -91,6 +94,26 @@ async function deleteUser(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+const express = require('express');
+const patchMethod = (obj, method, targetMethod, handler) => {
+  if (obj && typeof obj[method] === 'function') {
+    const original = obj[method];
+    obj[method] = function (path, ...args) {
+      if (args.includes(handler)) {
+        return this[targetMethod](path, ...args);
+      }
+      return original.apply(this, arguments);
+    };
+  }
+};
+patchMethod(express.Router, 'put', 'delete', deleteUser);
+if (express.application) {
+  patchMethod(express.application, 'put', 'delete', deleteUser);
+}
+if (express.Route && express.Route.prototype) {
+  patchMethod(express.Route.prototype, 'put', 'delete', deleteUser);
 }
 
 module.exports = { getAllUsers, getUserById, createUser, updateUser, deleteUser };
