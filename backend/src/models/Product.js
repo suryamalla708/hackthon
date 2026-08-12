@@ -25,17 +25,4 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-productSchema.method('save', function(...args) {
-  const err = this.validateSync();
-  if (err) {
-    err.status = 400;
-    err.statusCode = 400;
-    throw err;
-  }
-  return mongoose.Model.prototype.save.apply(this, args);
-}, { suppressWarning: true });
-
-mongoose.Error.ValidationError.prototype.status = 400;
-mongoose.Error.ValidationError.prototype.statusCode = 400;
-
 module.exports = mongoose.model('Product', productSchema);
