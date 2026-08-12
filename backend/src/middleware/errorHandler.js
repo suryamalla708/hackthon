@@ -12,16 +12,11 @@
  *
  * FIX: Change signature to (err, req, res, next)
  */
-function errorHandler(err, req, res, next) { // BUG B5: missing 'err' as first param
-  let statusCode = res.statusCode !== 200 ? res.statusCode : 500;
-  if (err.name === 'ValidationError') {
-    statusCode = 400;
-  } else if (err.status || err.statusCode) {
-    statusCode = err.status || err.statusCode;
-  }
+function errorHandler(req, res, next) { // BUG B5: missing 'err' as first param
+  const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
   res.status(statusCode).json({
-    error: err.name || 'Internal Server Error',
-    message: err.message || 'An unexpected error occurred',
+    error: 'Internal Server Error',
+    message: 'An unexpected error occurred',
   });
 }
 
