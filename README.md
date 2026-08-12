@@ -42,7 +42,64 @@ npm test
 
 ## Environment Setup
 
-```bash
-cp .env.example .env
-# Fill in your MONGODB_URI for the dev server (tests use in-memory MongoDB)
+Create a `.env` file in the `backend/` directory:
 ```
+# For development/database connection:
+MONGODB_URI=your-mongodb-uri
+
+# For the AI Debugging Agent:
+GEMINI_API_KEY=your-gemini-api-key
+```
+
+## Phase 3: Code Search & Diagnostic Pipeline
+
+The codebase includes automated tools to run tests, collect failing traces, and statically search the codebase for suspect files:
+
+```bash
+cd backend
+npm run pipeline
+```
+
+This runs the failure collection script (`scripts/collectFailures.js`), runs the static code searcher (`scripts/searchCode.js`), and outputs diagnostic logs to:
+- `logs/failure-report.json` — Structured JSON report of all Jest failures.
+- `logs/code-locations.json` — Scanned suspect files and high-confidence static code matches.
+
+## Phase 4: Automated AI Repair Loop
+
+An automated script that reads code locations and performs search/replace repairs based on Mock or LLM responses:
+
+```bash
+cd backend
+npm run repair
+```
+
+To revert all repairs and restore the codebase back to the intentionally broken state, run:
+```bash
+npm run revert
+```
+
+## Phase 5: RepairAI AI Debugging Agent
+
+A fully autonomous agentic script that reads failing reports, queries Gemini, applies temporary isolated patches, verifies results, and performs self-correcting retries.
+
+### Run the Agent
+To start the debugging and repair loop using real LLM calls:
+```bash
+cd backend
+npm run agent
+```
+
+To run a verification check in mock-simulated mode to test the retry, backup, and restore capabilities:
+```bash
+npm run agent -- --mock
+```
+
+### Agent Repair Lifecycle
+For each failing test case, the agent will:
+1. Load the Jest failure report and server request captures.
+2. Read the suspect source code file.
+3. Query `gemini-3.5-flash` with the complete stack trace and diagnostic findings to identify the root cause and generate a structured JSON patch.
+4. Perform an in-place backup (`.bak`) and apply the patch.
+5. Invoke targeted Jest tests (`npx jest [file] -t "[testNameRegex]"`) to isolate verification.
+6. Auto-revert the changes if tests fail, providing the failure stdout to the next LLM attempt (up to 3 retries).
+7. Permanently apply and commit the patch if tests pass.
